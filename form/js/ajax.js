@@ -62,7 +62,7 @@
             return;
         }
         else { 
-            $.post("addaa.php",
+            $.post("insert.php",
                 {
                 name:name,
                 sex:sex,
@@ -88,7 +88,6 @@
                             case "2": alert("信息错误QOQ");break;
                             case "3": alert("信息不能正常提交QUQ");break;
                             case "4": alert("已经提交过表单啦");break;
-                            case "5": alert("非法访问");break;
                             default:alert("未知错误");break;
                         }
                     }

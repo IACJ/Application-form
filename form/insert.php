@@ -1,18 +1,32 @@
 <?php  
 require "config.php";
 
-class Qiuzhao{
+
+	/* 
+	* 本程序只返回一个数字即 $chunzhao::$response;
+	* 规定数字含义如下  
+	*  100  报名已经截止
+	*  99   入口未开放
+	*  0    【提交成功】
+    *  1    信息不完整
+    *  2    信息有错误,不符合要求
+    *  3    信息不能正常提交（数据库配置错误、PDO运行出错等）
+    *  4    非法访问 或 重复提交表单
+	*/
+class Chunzhao{
 
 	public static $info = "";   //信息提示
-	public static $response = 0; //返回状态码
+	public static $response = 3; //返回状态码
+
+
 
 	//表单验证
 	public function check(){
 
-		//-------TODO：时间验证-----------
+		//-------TO DO：时间验证-----------
 		// date_default_timezone_set("Asia/Shanghai");
-		// $startTime = strtotime("2016-9-11 12:40:00");
-		// $endTime = strtotime("2016-9-14 23:59:59");
+		// $startTime = strtotime("2017-4-14 23:59:59");
+		// $endTime   = strtotime("2017-4-19 23:59:59");
 		// $nowTime = time();
 		// if ($nowTime < $startTime) {
 		// 	self::$info = "报名未开始";
@@ -25,8 +39,13 @@ class Qiuzhao{
 		// 	return false;			
 		// }
 
-		//防空
-		if (empty($_POST) || empty($_POST['name']) || empty($_POST['sex']) || empty($_POST['college']) || empty($_POST['grade']) || empty($_POST['dorm']) || empty($_POST['phone']) || empty($_POST['department1']) ){
+
+		//防空 (注意，第二志愿可为空)
+		if (empty($_POST) || empty($_POST['name']) || 
+				empty($_POST['sex']) || empty($_POST['college']) || 
+				empty($_POST['grade']) || empty($_POST['dorm']) || 
+				empty($_POST['phone']) || empty($_POST['department1']) ){
+
 			self::$info = "信息不完整";
 			self::$respons = 1;
 			return false;
@@ -35,10 +54,10 @@ class Qiuzhao{
 		//验证token
 		if (empty($_POST['token']) || empty($_SESSION['token']) || $_SESSION['token'] != $_POST['token']) {
 			self::$info = "非法访问";
-			self::$response = 5;
+			self::$response = 4;
 			return false;
 		}else{
-			unset($_SESSION['token']);
+			unset($_SESSION['token']); //将token销毁
 		}
 
 		//检查手机号
@@ -62,18 +81,25 @@ class Qiuzhao{
 			echo $_POST['dorm'];
 			return false;
 		}
+
+
+
+		//------- TO DO: 针对数据库字段长度等信息，再增添一些合理的表单验证------
+
+
 		return true;
 	}
 
     //插入数据
 	public function insert(){
+
 		//表单验证
 		if (!$this->check()){
 			return false;
 		}
 
-		//创建POD并插入一条数据
 
+		//创建POD并插入一条数据
 		try{
 			//$pdo = new PDO('mysql:host=localhost;dbname=qiuzhao','root','');
 			$pdo  = new PDO(DB_TYPE.':host='.DB_HOST.';dbname='.DB_NAME,DB_USER,DB_PWD);
@@ -81,6 +107,7 @@ class Qiuzhao{
 			$sql = "INSERT INTO user(name,sex,college,grade,dorm,phone,department1,department2,intro,time) VALUES(:name,:sex,:college,:grade,:dorm,:phone,:department1,:department2,:intro,now())";
 			$stmt = $pdo->prepare($sql);
 
+			//绑定数据，防止SQL注入
 			$stmt->bindParam(':name',$_POST['name'],PDO::PARAM_STR);
 			$stmt->bindParam(':sex',$_POST['sex'],PDO::PARAM_STR);
 			$stmt->bindParam(':college',$_POST['college'],PDO::PARAM_STR);
@@ -96,20 +123,19 @@ class Qiuzhao{
 			//检查是否出错
 			$arrError = $stmt->errorInfo();
 			if ($arrError[0] !='00000') {
-				self::$info = 'SQLSTAE: '.$arrError[0].'  SQL Error: '.$arrError[2];
+				self::$info = 'SQLSTAE: '.$arrError[0].'  SQL Error: '.$arrError[2];  //拼接错误信息
 				self::$response = 3 ;
-				//echo self::$info;
+				//echo self::$info;  for debug
 				return false;
 			}
 
 		}catch(PDOException $e){
-
 			self::$info = "PDO异常:".$e;
 			self::$response = 3;
 			return false;
 		}
 
-		//成功了
+		//执行成功
 		self::$info = "执行成功";
 		self::$response = 0;
 		return true;
@@ -119,8 +145,9 @@ class Qiuzhao{
 
  // ____main____
 session_start();
-$qiuzhao = new Qiuzhao();
-$qiuzhao->insert();
-echo $qiuzhao::$response;
+$chunzhao = new Chunzhao();
+$chunzhao->insert();
+echo $chunzhao::$response;
+//echo $qiuzhao::$info   ONLY WHEN DEBUG
 
 
